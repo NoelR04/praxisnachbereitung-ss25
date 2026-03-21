@@ -1,8 +1,4 @@
-# ETL mit Excel & Git – Praxisnachbereitung SS25
-
-## Ziel der Übung
-
-Ziel dieser Übung war es, unbereinigte CSV-Daten in Excel zu importieren, zu bereinigen, zusammenzuführen und anschließend visuell auszuwerten. 
+# Praxisnachbereitung SS26
 
 ## Vorgehen
 
