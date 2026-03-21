@@ -45,7 +45,7 @@ Ergebnis:
 
 ---
 
-## 4. Analyse (Teil D)
+## 4. Analyse
 
 ### Gesamtwert nicht im Einsatz befindlicher Geräte
 
