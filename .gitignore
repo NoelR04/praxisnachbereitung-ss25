@@ -39,3 +39,17 @@
 
 # debug information files
 *.dwo
+
+# VS Code / Dev Container
+.vscode/
+.devcontainer/.env
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
+
+# Environment
+.env
+.env.*
