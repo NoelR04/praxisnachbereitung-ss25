@@ -8,7 +8,6 @@
 --
 -- Ergänzt anschließend kleine Seed-Daten, damit ihr eure Flows testen könnt.
 
-
 create table if not exists department (
   department_id  serial primary key,
   name           text not null unique
@@ -35,12 +34,11 @@ create table if not exists person (
 create table if not exists device (
   device_id      serial primary key,
   serial_number  text not null unique,
-  device_name    text not null,
   device_type_id int not null references device_type(device_type_id) on delete restrict,
   location_id    int not null references location(location_id) on delete restrict,
+  note           text,
   created_at     timestamp not null default now()
 );
-
 
 create table if not exists assignment (
   assignment_id  serial primary key,
@@ -51,11 +49,9 @@ create table if not exists assignment (
   check (returned_at is null or returned_at >= issued_at)
 );
 
--- nur eine aktive Ausleihe pro Gerät
 create unique index if not exists uq_assignment_active_device
   on assignment (device_id)
   where returned_at is null;
-
 
 insert into department (name) values
   ('IT'),
@@ -81,10 +77,10 @@ insert into person (vorname, nachname, email, department_id) values
   ('Clara', 'Weber', 'clara.weber@example.com', 3)
 on conflict (email) do nothing;
 
-insert into device (serial_number, device_name, device_type_id, location_id) values
-  ('LAP-1001', 'Lenovo ThinkPad T14', 1, 1),
-  ('MON-2001', 'Dell P2422H', 2, 2),
-  ('SCAN-3001', 'Zebra DS2278', 3, 3)
+insert into device (serial_number, device_type_id, location_id, note) values
+  ('LAP-1001', 1, 1, 'Lenovo ThinkPad T14'),
+  ('MON-2001', 2, 2, 'Dell P2422H'),
+  ('SCAN-3001', 3, 3, 'Zebra DS2278')
 on conflict (serial_number) do nothing;
 
 insert into assignment (device_id, person_id, issued_at, returned_at)
