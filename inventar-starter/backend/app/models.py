@@ -7,18 +7,34 @@ from pydantic import BaseModel
 
 
 class DeviceCreate(BaseModel):
-  serial_number: str
-  device_type_id: int
-  location_id: int
-  note: str | None = None
+    serial_number: str
+    device_type_id: int
+    location_id: int
+    note: str | None = None
 
 
 class AssignmentCreate(BaseModel):
-  device_id: int
-  person_id: int
-  issued_at: str | None = None
+    device_id: int
+    person_id: int
+    issued_at: str | None = None
 
 
 class AssignmentReturn(BaseModel):
-  returned_at: str | None = None
+    returned_at: str | None = None
 
+
+class DeviceOut(BaseModel):
+    device_id: int
+    serial_number: str
+    device_type_id: int
+    location_id: int
+    note: str | None = None
+    created_at: str
+
+
+class AssignmentOut(BaseModel):
+    assignment_id: int
+    device_id: int
+    person_id: int
+    issued_at: str
+    returned_at: str | None = None
