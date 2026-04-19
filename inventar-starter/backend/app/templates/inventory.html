@@ -13,21 +13,197 @@
       ul { padding-left: 1.2rem; }
       .hint { color: #4b5563; }
       .box { margin-top: 1.5rem; padding: 1rem 1.25rem; border: 1px solid #e5e7eb; border-radius: 12px; background: #f9fafb; }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 1rem;
+      }
+
+      th, td {
+        text-align: left;
+        padding: 0.75rem;
+        border-bottom: 1px solid #e5e7eb;
+        vertical-align: top;
+      }
+
+      th {
+        background: #f9fafb;
+      }
+
+      label {
+        display: block;
+        margin-top: .75rem;
+        font-weight: 500;
+      }
+
+      input, select {
+        width: 100%;
+        padding: .55rem .7rem;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        margin-top: .25rem;
+        box-sizing: border-box;
+      }
+
+      button {
+        margin-top: 1rem;
+        padding: .55rem .9rem;
+        border-radius: 10px;
+        border: 1px solid #d1d5db;
+        background: white;
+        cursor: pointer;
+      }
+
+      .status-frei {
+        color: #166534;
+        font-weight: 600;
+      }
+
+      .status-ausgeliehen {
+        color: #991b1b;
+        font-weight: 600;
+      }
+
+      .inline-form {
+        display: inline;
+      }
+
+      .muted {
+        color: #6b7280;
+      }
     </style>
   </head>
   <body>
     <div class="card">
-      <h1>Inventar Starter</h1>
-      <p class="hint">Diese Seite ist bewusst nur ein Platzhalter. Ihr ergänzt hier im Laufe der Übung eure Inventar-Oberfläche.</p>
+      <h1>Inventar</h1>
+      <p class="hint">Einfache Oberfläche für Geräte und Ausleihen.</p>
 
       <div class="box">
-        <h2>Nächste Schritte</h2>
-        <ul>
-          <li>Ergänzt euer Inventar-Schema in <code>db/init/010_inventory_schema.sql</code>.</li>
-          <li>Legt Endpunkte für <code>/devices</code> und <code>/assignments</code> an.</li>
-          <li>Baut hier eine einfache Übersicht für Geräte und Ausleihen.</li>
-          <li>Nutzt den <code>grades-starter</code> als Referenz für Formulare, Templates und CRUD-Muster.</li>
-        </ul>
+        <h2>Geräteübersicht</h2>
+
+        {% if devices %}
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Seriennummer</th>
+              <th>Typ</th>
+              <th>Standort</th>
+              <th>Hinweis</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for d in devices %}
+            <tr>
+              <td>{{ d.device_id }}</td>
+              <td>{{ d.serial_number }}</td>
+              <td>{{ d.device_type }}</td>
+              <td>{{ d.location }}</td>
+              <td>{{ d.note or "-" }}</td>
+              <td>
+                {% if d.status == "frei" %}
+                  <span class="status-frei">frei</span>
+                {% else %}
+                  <span class="status-ausgeliehen">ausgeliehen</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <p class="muted">Noch keine Geräte vorhanden.</p>
+        {% endif %}
+      </div>
+
+      <div class="box">
+        <h2>Gerät hinzufügen</h2>
+        <form method="post" action="/inventory/devices">
+          <label for="serial_number">Seriennummer</label>
+          <input id="serial_number" name="serial_number" required />
+
+          <label for="device_type_id">Gerätetyp</label>
+          <select id="device_type_id" name="device_type_id" required>
+            {% for dt in device_types %}
+            <option value="{{ dt.device_type_id }}">{{ dt.name }}</option>
+            {% endfor %}
+          </select>
+
+          <label for="location_id">Standort</label>
+          <select id="location_id" name="location_id" required>
+            {% for l in locations %}
+            <option value="{{ l.location_id }}">{{ l.name }}</option>
+            {% endfor %}
+          </select>
+
+          <label for="note">Hinweis</label>
+          <input id="note" name="note" />
+
+          <button type="submit">Gerät anlegen</button>
+        </form>
+      </div>
+
+      <div class="box">
+        <h2>Gerät ausgeben</h2>
+
+        {% if available_devices %}
+        <form method="post" action="/inventory/assignments">
+          <label for="person_id">Person</label>
+          <select id="person_id" name="person_id" required>
+            {% for p in persons %}
+            <option value="{{ p.person_id }}">{{ p.vorname }} {{ p.nachname }}</option>
+            {% endfor %}
+          </select>
+
+          <label for="device_id">Verfügbares Gerät</label>
+          <select id="device_id" name="device_id" required>
+            {% for d in available_devices %}
+            <option value="{{ d.device_id }}">{{ d.serial_number }}</option>
+            {% endfor %}
+          </select>
+
+          <button type="submit">Ausgeben</button>
+        </form>
+        {% else %}
+        <p class="muted">Aktuell ist kein freies Gerät verfügbar.</p>
+        {% endif %}
+      </div>
+
+      <div class="box">
+        <h2>Aktive Ausleihen</h2>
+
+        {% if active_assignments %}
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Gerät</th>
+              <th>Person</th>
+              <th>Ausgegeben am</th>
+              <th>Aktion</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for a in active_assignments %}
+            <tr>
+              <td>{{ a.assignment_id }}</td>
+              <td>{{ a.serial_number }}</td>
+              <td>{{ a.vorname }} {{ a.nachname }}</td>
+              <td>{{ a.issued_at }}</td>
+              <td>
+                <form method="post" action="/inventory/assignments/{{ a.assignment_id }}/return" class="inline-form">
+                  <button type="submit">Zurückgeben</button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <p class="muted">Keine aktiven Ausleihen vorhanden.</p>
+        {% endif %}
       </div>
     </div>
   </body>
