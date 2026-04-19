@@ -1,17 +1,20 @@
-from fastapi import FastAPI, Request, Form, Response
+from fastapi import FastAPI, Request, Form
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse, RedirectResponse
-import os, io, csv
+import os
 import paho.mqtt.client as mqtt
 
 from .db import get_conn
 from .models import StudentCreate, StudentUpdate, ModuleCreate, GradeCreate, Grade
 from .mqtt_integration import start_mqtt_listener
+from .routes.reports import router as reports_router
 
 app = FastAPI(title="Grades Starter", version="0.1.0")
 templates = Jinja2Templates(directory=os.path.join(os.path.dirname(__file__), "templates"))
 MQTT_HOST = os.getenv("MQTT_HOST", "mqtt")
 MQTT_PORT = int(os.getenv("MQTT_PORT", "1883"))
+
+app.include_router(reports_router)
 
 
 def mqtt_client() -> mqtt.Client:
@@ -61,7 +64,7 @@ def edit_student_page(request: Request, student_id: int):
 
   return templates.TemplateResponse(
     "students/edit.html",
-    {"request": request, "title": "Student bearbeiten", "student": student},
+    {"request": request, "title": "Studierende bearbeiten", "student": student},
   )
 
 
@@ -290,50 +293,6 @@ def grades_htmx(request: Request, student_id: int | None = None):
     "grades/_list.html",
     {"request": request, "grades": grades},
   )
-
-
-@app.get("/grades.csv")
-def grades_csv():
-  with get_conn() as conn, conn.cursor() as cur:
-    cur.execute(
-      """
-      select g.grade_id,
-             s.matrikel,
-             s.vorname,
-             s.nachname,
-             s.programme,
-             s.semester,
-             m.name as module_name,
-             g.grade_value,
-             g.graded_at
-      from grade g
-      join student s on s.student_id = g.student_id
-      join module m on m.module_id = g.module_id
-      order by s.matrikel, m.name, g.graded_at
-      """,
-    )
-    rows = list(cur.fetchall())
-
-  buf = io.StringIO()
-  fieldnames = [
-    "grade_id",
-    "matrikel",
-    "vorname",
-    "nachname",
-    "programme",
-    "semester",
-    "module_name",
-    "grade_value",
-    "graded_at",
-  ]
-  writer = csv.DictWriter(buf, fieldnames=fieldnames, delimiter=";", lineterminator="\n")
-  writer.writeheader()
-  for r in rows:
-    writer.writerow(r)
-
-  data = buf.getvalue().encode("utf-8-sig")
-  headers = {"Content-Disposition": 'attachment; filename="grades.csv"'}
-  return Response(content=data, media_type="text/csv; charset=utf-8", headers=headers)
 
 
 @app.get("/health")

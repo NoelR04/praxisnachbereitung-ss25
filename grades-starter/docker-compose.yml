@@ -6,6 +6,7 @@ services:
       POSTGRES_USER: appuser
       POSTGRES_PASSWORD: apppass
     volumes:
+      - pgdata:/var/lib/postgresql/data
       - ./db/init:/docker-entrypoint-initdb.d:ro
     ports:
       - "5432:5432"
@@ -17,14 +18,19 @@ services:
 
   mqtt:
     image: eclipse-mosquitto:2
+    volumes:
+      - ./mqtt/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
     ports:
       - "1883:1883"
       - "9001:9001"
-    volumes:
-      - ./mqtt/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
 
   api:
     build: .
+    command: uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload
+    environment:
+      DB_DSN: postgresql://appuser:apppass@db:5432/appdb
+      MQTT_HOST: mqtt
+      MQTT_PORT: 1883
     depends_on:
       db:
         condition: service_healthy
@@ -32,11 +38,9 @@ services:
         condition: service_started
     ports:
       - "8000:8000"
-    environment:
-      - PYTHONUNBUFFERED=1
-      - DB_DSN=postgresql://appuser:apppass@db:5432/appdb
-      - MQTT_HOST=mqtt
-      - MQTT_PORT=1883
     volumes:
-      - ./backend:/app/backend:rw
+      - ./backend:/app/backend
       - ./.env:/app/.env:ro
+
+volumes:
+  pgdata:

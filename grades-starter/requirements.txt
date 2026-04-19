@@ -6,3 +6,5 @@ python-dotenv==1.0.1
 Jinja2==3.1.4
 paho-mqtt==2.1.0
 python-multipart==0.0.9
+alembic==1.13.1
+openpyxl==3.1.5
