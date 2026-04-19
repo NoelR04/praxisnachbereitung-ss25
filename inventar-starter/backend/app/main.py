@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request, Query, HTTPException, status, Form
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 import os
 from datetime import datetime
 import psycopg
@@ -8,6 +8,8 @@ from psycopg.errors import UniqueViolation, ForeignKeyViolation
 from .db import get_conn
 from .models import DeviceCreate, AssignmentCreate, AssignmentReturn
 import paho.mqtt.client as mqtt
+import io
+import pandas as pd
 
 app = FastAPI(title="Inventar Starter", version="0.1.0")
 templates = Jinja2Templates(
@@ -439,3 +441,54 @@ async def return_assignment_api(assignment_id: int, payload: AssignmentReturn):
     )
 
     return updated
+
+
+def get_assignment_df() -> pd.DataFrame:
+    with get_conn() as conn, conn.cursor() as cur:
+        cur.execute("""
+            SELECT
+                a.assignment_id,
+                a.issued_at,
+                a.returned_at,
+                a.damage_note,
+                p.vorname || ' ' || p.nachname AS person_name,
+                p.email                         AS person_email,
+                d.serial_number,
+                dt.name                         AS device_type,
+                l.name                          AS location_name
+            FROM assignment a
+            JOIN person      p  ON a.person_id      = p.person_id
+            JOIN device      d  ON a.device_id      = d.device_id
+            JOIN device_type dt ON d.device_type_id = dt.device_type_id
+            JOIN location    l  ON d.location_id    = l.location_id
+            ORDER BY a.issued_at DESC
+        """)
+        rows = cur.fetchall()
+    return pd.DataFrame(rows)
+
+
+@app.get("/assignments.csv")
+def export_assignments_csv():
+    df = get_assignment_df()
+    output = io.StringIO()
+    df.to_csv(output, index=False, sep=";")
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=assignments.csv"},
+    )
+
+
+@app.get("/assignments.xlsx")
+def export_assignments_xlsx():
+    df = get_assignment_df()
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        df.to_excel(writer, index=False, sheet_name="Assignments")
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.read()]),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=assignments.xlsx"},
+    )
